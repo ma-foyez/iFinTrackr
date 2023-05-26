@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
     res.send("Yahoo! APP is running successfully!");
 });
 
-app.use('/api/user', userRouter)
+app.use('/api/v1/user', userRouter)
 
 app.use(notFound)
 app.use(errorHandler)
