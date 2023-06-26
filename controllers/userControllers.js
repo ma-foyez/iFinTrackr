@@ -3,8 +3,6 @@ const res = require("express/lib/response");
 const User = require("../models/userModel");
 const generateToken = require("../config/generateToken");
 
-
-
 const registerUser = asyncHandler(async (req, res) => {
     const { name, mobile, password, pic } = req.body;
 
@@ -17,7 +15,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (userExits) {
         res.status(400);
-        throw new Error("You have already an account!");
+        throw new Error("You have already an account. Please try to login!");
     }
 
     const user = await User.create({
@@ -29,12 +27,15 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (user) {
         res.status(201).json({
-            _id: user._id,
-            name: user.name,
-            email: user.mobile,
-            pic: user.pic,
-            token: generateToken(user._id),
-            message: "You have been successfully creating a new account"
+            status: 201,
+            message: "You have been successfully create new account",
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.mobile,
+                pic: user.pic,
+                token: generateToken(user._id),
+            }
 
         });
     } else {
@@ -49,13 +50,20 @@ const authUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({ mobile });
 
     if (user && (await user.matchPassword(password))) {
-        res.json({
-            _id: user._id,
-            name: user.name,
-            mobile: user.mobile,
-            pic: user.pic,
-            token: generateToken(user._id)
-        })
+        res.status(201).json({
+            status: 201,
+            message: "Login successfully.",
+            data: {
+                _id: user._id,
+                name: user.name,
+                mobile: user.mobile,
+                pic: user.pic,
+                access_token: generateToken(user._id),
+            }
+        });
+    } else {
+        res.status(400);
+        throw new Error("Mobile or Password do not match!");
     }
 })
 
