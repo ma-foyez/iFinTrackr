@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/peopleModal");
 const Transaction = require("../models/transactionModal");
+const { managePeopleCalculation } = require("../_utlits/transactionCalculation");
 
 /**
  * Store New Profile Information
@@ -14,6 +15,8 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         throw new Error("Please input all required fields");
     }
 
+    const getTotalTransaction = await managePeopleCalculation(person_id, amount, type_of_transaction);
+
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
     const getUserById = await Profile.findOne({ _id: person_id });
 
@@ -22,6 +25,23 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         throw new Error("Invalid User!");
     }
 
+    // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
+    const updateOne = await Profile.updateOne({ _id: person_id }, {
+        $set: {
+            total_liabilities: getTotalTransaction.TotalLiabilities,
+            total_payable: getTotalTransaction.totalPayable,
+            due_liabilities: getTotalTransaction.dueLiabilities,
+            due_payable: getTotalTransaction.duePayable,
+
+        }
+    });
+
+    if (!updateOne) {
+        res.status(400);
+        throw new Error("Something went wrong! Transaction update failed!");
+    }
+
+    // store New Transaction 
     const storeTransaction = await Transaction.create({
         person_id,
         person_name,
@@ -32,7 +52,6 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         type_of_transaction,
         amount,
     });
-
 
     if (storeTransaction) {
         res.status(201).json({
