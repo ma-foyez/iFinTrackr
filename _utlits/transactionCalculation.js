@@ -1,6 +1,6 @@
 const Profile = require("../models/peopleModal");
 
-const managePeopleCalculation = async (personaId, amount, transactionType) => {
+const transactionCalculationForPeople = async (personaId, amount, transactionType) => {
     // Retrieve user profile from the database
     const getUserById = await Profile.findOne({ _id: personaId });
     const { total_liabilities, total_payable, due_liabilities, due_payable } = getUserById;
@@ -65,4 +65,4 @@ const managePeopleCalculation = async (personaId, amount, transactionType) => {
     };
 };
 
-module.exports = { managePeopleCalculation };
+module.exports = { transactionCalculationForPeople };

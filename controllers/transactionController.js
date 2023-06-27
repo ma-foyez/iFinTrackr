@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/peopleModal");
 const Transaction = require("../models/transactionModal");
-const { managePeopleCalculation } = require("../_utlits/transactionCalculation");
+const { transactionCalculationForPeople } = require("../_utlits/transactionCalculation");
 
 /**
  * Store New Profile Information
@@ -15,7 +15,7 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         throw new Error("Please input all required fields");
     }
 
-    const getTotalTransaction = await managePeopleCalculation(person_id, amount, type_of_transaction);
+    const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
 
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
     const getUserById = await Profile.findOne({ _id: person_id });
@@ -78,82 +78,109 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
 
 
 /**
- * Get Profile Information List
+ * Get All Transaction List
  */
-const getProfileList = asyncHandler(async (req, res) => {
 
+const getAllTransaction = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+
+    const userID = req.query.user_id;
     // Put all your query params in here
-    const countPromise = Profile.countDocuments({});
-    const itemsPromise = Profile.find().limit(limit).skip(page > 1 ? skip : 0);
+    const countPromise = Transaction.countDocuments({ person_id: userID });
+    const itemsPromise = Transaction.find({ person_id: userID }).limit(limit).skip(page > 1 ? skip : 0);
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
-    const pageCount = count / limit;
-    const viewCurrentPage = (count > limit) ? Math.ceil(pageCount) : page;
+    const pageCount = Math.ceil(count / limit);
+    const viewCurrentPage = (count > limit) ? Math.min(page, pageCount) : page;
 
     if (items) {
-        res.status(201).json({
+        res.status(200).json({
             pagination: {
                 total_data: count,
-                total_page: viewCurrentPage,
-                current_page: page,
+                total_page: pageCount,
+                current_page: viewCurrentPage,
                 data_load_current_page: items.length,
             },
             data: items,
-            status: 201,
-            message: "Profile list loaded successfully!",
+            status: 200,
+            message: "Transaction list loaded successfully!",
         });
     } else {
         res.status(400);
-        throw new Error("Failed to load profile list.");
+        throw new Error("Failed to load transaction list.");
     }
 });
 
 
-/**
- * Get Single Profile
- */
-const getProfileDetails = asyncHandler(async (req, res) => {
 
-    const singleProfile = await Profile.findById(req.params.id);
+/**
+ * Get Single Transaction
+ */
+const getSingleTransaction = asyncHandler(async (req, res) => {
+
+    const singleProfile = await Transaction.findById(req.params.id);
 
     if (singleProfile) {
         res.status(201).json({
             data: singleProfile,
             status: 201,
-            message: "Profile loaded successfully!"
+            message: "Transaction loaded successfully!"
         });
     } else {
         res.status(400);
-        throw new Error("Failed to load profile");
+        throw new Error("Failed to load transaction!");
     }
 });
 
 /**
- * Update Profile Info
+ * Update Transaction
  */
-const updateProfile = asyncHandler(async (req, res) => {
+const updateTransaction = asyncHandler(async (req, res) => {
 
-    const { _id, name, mobile, email, relation, address, pic } = req.body;
+    const { _id, person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
 
-    if (!_id || !name || !mobile || !relation || !address) {
+    if (!_id || !person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
         throw new Error("Please input all required fields");
     }
 
-    const alreadyExits = await Profile.findOne({ _id });
+    const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
 
-    const updateOne = await Profile.updateOne({ _id }, {
+    // Get Profiles Details From Profile Collection(PeopleRoute) by _id
+    const getUserById = await Profile.findOne({ _id: person_id });
+
+    if (!getUserById) {
+        res.status(400);
+        throw new Error("Invalid User!");
+    }
+
+    // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
+    const updateTransaction = await Profile.updateOne({ _id: person_id }, {
+        $set: {
+            total_liabilities: getTotalTransaction.TotalLiabilities,
+            total_payable: getTotalTransaction.totalPayable,
+            due_liabilities: getTotalTransaction.dueLiabilities,
+            due_payable: getTotalTransaction.duePayable,
+        }
+    });
+
+    if (!updateTransaction) {
+        res.status(400);
+        throw new Error("Something went wrong! Transaction update failed!");
+    }
+
+    const updateOne = await Transaction.updateOne({ _id }, {
         $set: {
             _id: _id,
-            name: name,
+            person_id: person_id,
+            person_name: person_name,
             mobile: mobile,
             email: email,
             relation: relation,
-            address: address,
-            pic: pic,
-
+            date_of_transaction: date_of_transaction,
+            type_of_transaction: type_of_transaction,
+            amount: amount,
         }
     });
 
@@ -161,41 +188,41 @@ const updateProfile = asyncHandler(async (req, res) => {
         res.status(201).json({
             data: {
                 _id: _id,
-                name: name,
+                person_id: person_id,
+                person_name: person_name,
                 mobile: mobile,
                 email: email,
                 relation: relation,
-                address: address,
-                total_liabilities: alreadyExits.total_liabilities,
-                total_payable: alreadyExits.total_payable,
-                pic: pic
+                date_of_transaction: date_of_transaction,
+                type_of_transaction: type_of_transaction,
+                amount: amount,
             },
             status: 201,
-            message: "Profile updated successfully!"
+            message: "Transaction updated successfully!"
         });
     } else {
         res.status(400);
-        throw new Error("Failed to profile");
+        throw new Error("Failed to transaction!");
     }
 });
 
 
 /**
- * Delete Single Profile
+ * Delete Single Transaction
  */
-const deleteProfile = asyncHandler(async (req, res) => {
+const deleteTransaction = asyncHandler(async (req, res) => {
 
-    const removeProfile = await Profile.findByIdAndDelete(req.params.id);
+    const removeTransaction = await Profile.findByIdAndDelete(req.params.id);
 
-    if (removeProfile) {
+    if (removeTransaction) {
         res.status(201).json({
             status: 201,
-            message: "Profile deleted successfully!"
+            message: "Transaction deleted successfully!"
         });
     } else {
         res.status(400);
-        throw new Error("Failed to delete profile");
+        throw new Error("Failed to delete transaction!");
     }
 });
 
-module.exports = { storeNewTransaction, getProfileList, getProfileDetails, updateProfile, deleteProfile }
+module.exports = { storeNewTransaction, getAllTransaction, getSingleTransaction, updateTransaction, deleteTransaction }

@@ -1,11 +1,11 @@
 const express = require("express");
-const { storeNewTransaction } = require("../controllers/transactionController");
+const { storeNewTransaction, updateTransaction, getAllTransaction, getSingleTransaction, deleteTransaction } = require("../controllers/transactionController");
 const TransactionRoute = express.Router();
 
 TransactionRoute.route('/store-transaction').post(storeNewTransaction)
-// TransactionRoute.route('/update-transaction').put(updateProfile);
-// TransactionRoute.route('/transaction-list').get(getProfileList);
-// TransactionRoute.route('/transaction-details/:id').get(getProfileDetails);
-// TransactionRoute.route('/delete-transaction/:id').delete(deleteProfile);
+TransactionRoute.route('/update-transaction').put(updateTransaction);
+TransactionRoute.route('/transaction-list').get(getAllTransaction);
+TransactionRoute.route('/transaction-details/:id').get(getSingleTransaction);
+TransactionRoute.route('/delete-transaction/:id').delete(deleteTransaction);
 
 module.exports = TransactionRoute;
