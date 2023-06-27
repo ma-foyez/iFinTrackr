@@ -10,31 +10,35 @@ const managePeopleCalculation = async (personaId, amount, transactionType) => {
     let duePayable = due_payable;
 
     if (transactionType == "liabilities") {
-        if (duePayable > 0) {
-            duePayable -= amount;
-        } else {
-            // dueLiabilities += amount;
-            dueLiabilities = (total_liabilities + amount) - total_payable;
+        TotalLiabilities += amount; // Previous Total Liabilities + Amount
+        if(duePayable > 0){
+            const newPayable = duePayable - amount;
+            if(newPayable < 0){
+                dueLiabilities += Math.abs(newPayable);
+                duePayable = 0;
+            }else{
+                duePayable = Math.abs(newPayable);
+                dueLiabilities = 0;
+            }
+        }else{
+            // payable logics
+            dueLiabilities += amount;
         }
-        TotalLiabilities += amount;
     } else {
-        if (dueLiabilities > 0) {
-            dueLiabilities -= amount;
-        } else {
-            // duePayable += amount;
-            duePayable = (total_payable + amount) - total_liabilities;
+        totalPayable += amount; // Previous Total Payable + Amount
+        if(dueLiabilities > 0){
+            const newDueLiabilities = dueLiabilities - amount;
+            if(newDueLiabilities < 0){
+                duePayable += Math.abs(newDueLiabilities);
+                dueLiabilities = 0;
+            }else{
+                dueLiabilities = Math.abs(newDueLiabilities);
+                duePayable = 0;
+            }
+        }else{
+            duePayable += amount;
         }
-        totalPayable += amount;
     }
-
-    // To check if due liabilities or due payable will be minus
-    if (dueLiabilities < 0) {
-        duePayable += dueLiabilities;
-        dueLiabilities = 0
-    } else if (duePayable < 0) {
-        dueLiabilities += duePayable;
-        duePayable = 0;
-    } 
 
     return {
         TotalLiabilities,
@@ -43,7 +47,5 @@ const managePeopleCalculation = async (personaId, amount, transactionType) => {
         duePayable
     };
 };
-
-
 
 module.exports = { managePeopleCalculation }
