@@ -18,11 +18,11 @@ const createProfile = asyncHandler(async (req, res) => {
 
     if (profileCheckByMobile) {
         res.status(400);
-        throw new Error("With this mobile number already have a profile!");
+        throw new Error("This mobile number is used for another account!");
     }
     if (profileCheckByEmail) {
         res.status(400);
-        throw new Error("With this email address already have a profile!");
+        throw new Error("This email address is used for another account!");
     }
 
 

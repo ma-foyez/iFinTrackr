@@ -12,7 +12,9 @@ const userSchema = mongoose.Schema(
         },
     },
     {
-        timestaps: true
+        collection: "auth_collection",
+        timestamps: true,
+        versionKey: false
     }
 )
 
