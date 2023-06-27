@@ -1,64 +1,59 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/peopleModal");
+const Transaction = require("../models/transactionModal");
 
 /**
  * Store New Profile Information
  */
 
-const createProfile = asyncHandler(async (req, res) => {
-    const { name, mobile, email, relation, address, pic } = req.body;
+const storeNewTransaction = asyncHandler(async (req, res) => {
+    const { person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
 
-    if (!name || !mobile || !relation || !address) {
+    if (!person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
         throw new Error("Please input all required fields");
     }
 
-    const profileCheckByMobile = await Profile.findOne({ mobile });
-    const profileCheckByEmail = await Profile.findOne({ email });
+    // Get Profiles Details From Profile Collection(PeopleRoute) by _id
+    const getUserById = await Profile.findOne({ _id: person_id });
 
-    if (profileCheckByMobile) {
+    if (!getUserById) {
         res.status(400);
-        throw new Error("This mobile number is used for another account!");
-    }
-    if (profileCheckByEmail) {
-        res.status(400);
-        throw new Error("This email address is used for another account!");
+        throw new Error("Invalid User!");
     }
 
-
-    const createProfile = await Profile.create({
-        name,
-        mobile,
-        email,
-        relation,
-        address,
-        pic,
+    const storeTransaction = await Transaction.create({
+        person_id,
+        person_name,
+        mobile: getUserById.mobile,
+        email: getUserById.email,
+        relation: getUserById.relation,
+        date_of_transaction,
+        type_of_transaction,
+        amount,
     });
 
-    const createdNewProfile = await Profile.findOne({ mobile });
 
-    if (createProfile) {
+    if (storeTransaction) {
         res.status(201).json({
             data: {
-                _id: createProfile._id,
-                name: createProfile.name,
-                mobile: createProfile.mobile,
-                email: createProfile.email,
-                relation: createProfile.relation,
-                address: createProfile.address,
-                total_liabilities: createdNewProfile.total_liabilities,
-                total_payable: createdNewProfile.total_payable,
-                due_liabilities: createdNewProfile.due_liabilities,
-                due_payable: createdNewProfile.due_payable,
-                pic: createProfile.pic,
+                _id: storeTransaction._id,
+                person_id: storeTransaction.person_id,
+                person_name: storeTransaction.person_name,
+                mobile: storeTransaction.mobile,
+                email: storeTransaction.email,
+                relation: storeTransaction.relation,
+                date_of_transaction: storeTransaction.date_of_transaction,
+                type_of_transaction: storeTransaction.type_of_transaction,
+                amount: storeTransaction.amount,
             },
             status: 201,
-            message: "You have successfully create profile!"
+            message: "You have successfully record new transaction!"
 
         });
     } else {
         res.status(400);
-        throw new Error("Failed to create new profile!");
+        throw new Error("Failed to record new transaction!");
     }
 });
 
@@ -184,4 +179,4 @@ const deleteProfile = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { createProfile, getProfileList, getProfileDetails, updateProfile, deleteProfile }
+module.exports = { storeNewTransaction, getProfileList, getProfileDetails, updateProfile, deleteProfile }

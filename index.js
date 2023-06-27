@@ -7,6 +7,7 @@ const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 var cors = require('cors');
 const AuthRouter = require("./routes/userRoute");
 const ProfileRoute = require("./routes/PeopleRoute");
+const TransactionRoute = require("./routes/transactionRoute");
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1/user', AuthRouter)
 app.use('/api/v1/profile', ProfileRoute)
+app.use('/api/v1/transaction', TransactionRoute)
 
 app.use(notFound)
 app.use(errorHandler)

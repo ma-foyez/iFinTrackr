@@ -9,6 +9,8 @@ const ProfileSchema = mongoose.Schema(
         address: { type: String, required: true },
         total_liabilities: { type: Number, required: false, default: 0 },
         total_payable: { type: Number, required: false, default: 0 },
+        due_liabilities: { type: Number, required: false, default: 0 },
+        due_payable: { type: Number, required: false, default: 0 },
         pic: {
             type: String,
             default: "https://www.pngitem.com/pimgs/m/130-1300253_female-user-icon-png-download-user-image-color.png",
