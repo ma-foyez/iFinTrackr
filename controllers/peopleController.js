@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/peopleModal");
+const Transaction = require("../models/dailyTransactionModal");
 
 /**
  * Store New Profile Information
@@ -67,54 +68,119 @@ const createProfile = asyncHandler(async (req, res) => {
  * Get Profile Information List
  */
 const getProfileList = asyncHandler(async (req, res) => {
-
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    // Put all your query params in here
+
     const countPromise = Profile.countDocuments({});
     const itemsPromise = Profile.find().limit(limit).skip(page > 1 ? skip : 0);
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = count / limit;
-    const viewCurrentPage = (count > limit) ? Math.ceil(pageCount) : page;
+    const viewCurrentPage = count > limit ? Math.ceil(pageCount) : page;
 
-    if (items) {
-        res.status(201).json({
-            pagination: {
-                total_data: count,
-                total_page: viewCurrentPage,
-                current_page: page,
-                data_load_current_page: items.length,
-            },
-            data: items,
-            status: 201,
-            message: "Profile list loaded successfully!",
-        });
-    } else {
+    if (!items) {
         res.status(400);
         throw new Error("Failed to load profile list.");
     }
+
+    const profileList = [];
+
+    for (let i = 0; i < items.length; i++) {
+        const profile = items[i];
+        const transactions = await Transaction.find({ person_id: profile._id });
+
+        let totalPayable = 0;
+        let totalLiabilities = 0;
+        let dueLiabilities = 0;
+        let duePayable = 0;
+
+        transactions.forEach(transaction => {
+            if (transaction.type_of_transaction === "payable") {
+                totalPayable += transaction.amount;
+            } else if (transaction.type_of_transaction === "liabilities") {
+                totalLiabilities += transaction.amount;
+            }
+        });
+
+        if (totalPayable > totalLiabilities) {
+            duePayable = totalPayable - totalLiabilities;
+        } else {
+            dueLiabilities = totalLiabilities - totalPayable;
+        }
+
+        const updatedProfile = {
+            ...profile._doc,
+            total_payable: totalPayable,
+            total_liabilities: totalLiabilities,
+            due_liabilities: dueLiabilities,
+            due_payable: duePayable
+        };
+        profileList.push(updatedProfile);
+    }
+
+    res.status(201).json({
+        pagination: {
+            total_data: count,
+            total_page: viewCurrentPage,
+            current_page: page,
+            data_load_current_page: items.length,
+        },
+        data: profileList,
+        status: 201,
+        message: "Profile list loaded successfully!",
+    });
 });
+
 
 
 /**
  * Get Single Profile
  */
 const getProfileDetails = asyncHandler(async (req, res) => {
+    const profileId = req.params.id;
 
-    const singleProfile = await Profile.findById(req.params.id);
-
-    if (singleProfile) {
-        res.status(201).json({
-            data: singleProfile,
-            status: 201,
-            message: "Profile loaded successfully!"
-        });
-    } else {
+    const singleProfile = await Profile.findById(profileId);
+    if (!singleProfile) {
         res.status(400);
         throw new Error("Failed to load profile");
     }
+
+    const transactions = await Transaction.find({ person_id: profileId });
+
+    let totalPayable = 0;
+    let totalLiabilities = 0;
+    let dueLiabilities = 0;
+    let duePayable = 0;
+
+    transactions.forEach(transaction => {
+        if (transaction.type_of_transaction === "payable") {
+            totalPayable += transaction.amount;
+        } else if (transaction.type_of_transaction === "liabilities") {
+            totalLiabilities += transaction.amount;
+        }
+    });
+
+    if (totalPayable > totalLiabilities) {
+        duePayable = totalPayable - totalLiabilities;
+    } else {
+        dueLiabilities = totalLiabilities - totalPayable;
+    }
+
+    res.status(201).json({
+        data: {
+            profile: {
+                ...singleProfile._doc,
+                total_liabilities: totalLiabilities,
+                total_payable: totalPayable,
+                due_liabilities: dueLiabilities,
+                due_payable: duePayable
+            },
+        },
+        status: 201,
+        message: "Profile loaded successfully!",
+    });
 });
+
 
 /**
  * Update Profile Info
