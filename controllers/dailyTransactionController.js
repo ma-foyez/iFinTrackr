@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/peopleModal");
-const Transaction = require("../models/transactionModal");
+const Transaction = require("../models/dailyTransactionModal");
 const { transactionCalculationForPeople } = require("../_utlits/transactionCalculation");
 
 /**
@@ -15,30 +15,12 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         throw new Error("Please input all required fields");
     }
 
-    const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
-
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
     const getUserById = await Profile.findOne({ _id: person_id });
 
     if (!getUserById) {
         res.status(400);
-        throw new Error("Invalid User!");
-    }
-
-    // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
-    const updateOne = await Profile.updateOne({ _id: person_id }, {
-        $set: {
-            total_liabilities: getTotalTransaction.TotalLiabilities,
-            total_payable: getTotalTransaction.totalPayable,
-            due_liabilities: getTotalTransaction.dueLiabilities,
-            due_payable: getTotalTransaction.duePayable,
-
-        }
-    });
-
-    if (!updateOne) {
-        res.status(400);
-        throw new Error("Something went wrong! Transaction update failed!");
+        throw new Error("User doesn't match!");
     }
 
     // store New Transaction 
@@ -77,6 +59,7 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
 });
 
 
+
 /**
  * Get All Transaction List
  */
@@ -86,10 +69,18 @@ const getAllTransaction = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const userID = req.query.user_id;
+    const person_id = req.query.person_id;
     // Put all your query params in here
-    const countPromise = Transaction.countDocuments({ person_id: userID });
-    const itemsPromise = Transaction.find({ person_id: userID }).limit(limit).skip(page > 1 ? skip : 0);
+    let countPromise;
+    let itemsPromise;
+    if (!person_id) {
+        countPromise = Transaction.countDocuments({});
+        itemsPromise = Transaction.find().limit(limit).skip(page > 1 ? skip : 0);
+    } else {
+        countPromise = Transaction.countDocuments({ person_id: person_id });
+        itemsPromise = Transaction.find({ person_id: person_id }).limit(limit).skip(page > 1 ? skip : 0);
+    }
+ 
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = Math.ceil(count / limit);
     const viewCurrentPage = (count > limit) ? Math.min(page, pageCount) : page;
@@ -111,7 +102,6 @@ const getAllTransaction = asyncHandler(async (req, res) => {
         throw new Error("Failed to load transaction list.");
     }
 });
-
 
 
 /**

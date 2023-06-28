@@ -12,7 +12,7 @@ const TransactionSchema = mongoose.Schema(
         relation: { type: String, required: true },
     },
     {
-        collection: "transaction_collection",
+        collection: "daily_transaction_collection",
         timestamps: true,
         versionKey: false
     }

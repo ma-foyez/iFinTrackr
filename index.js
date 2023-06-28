@@ -2,12 +2,12 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const colors = require("colors");
-const userRouter = require("./routes/userRoute");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 var cors = require('cors');
 const AuthRouter = require("./routes/userRoute");
 const ProfileRoute = require("./routes/PeopleRoute");
-const TransactionRoute = require("./routes/transactionRoute");
+const DailyTransactionRoute = require("./routes/dailyTransactionRoute");
+const MonthlyTransactionRoute = require("./routes/monthlyTransactionRoute");
 
 dotenv.config();
 
@@ -24,7 +24,8 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1/user', AuthRouter)
 app.use('/api/v1/profile', ProfileRoute)
-app.use('/api/v1/transaction', TransactionRoute)
+app.use('/api/v1/daily-transaction', DailyTransactionRoute)
+app.use('/api/v1/monthly-transaction', MonthlyTransactionRoute)
 
 app.use(notFound)
 app.use(errorHandler)
