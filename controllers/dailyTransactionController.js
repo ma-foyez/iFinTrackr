@@ -36,7 +36,7 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
     });
 
     if (storeTransaction) {
-        res.status(201).json({
+        res.status(200).json({
             data: {
                 _id: storeTransaction._id,
                 person_id: storeTransaction.person_id,
@@ -48,7 +48,7 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
                 type_of_transaction: storeTransaction.type_of_transaction,
                 amount: storeTransaction.amount,
             },
-            status: 201,
+            status: 200,
             message: "You have successfully record new transaction!"
 
         });
@@ -112,9 +112,9 @@ const getSingleTransaction = asyncHandler(async (req, res) => {
     const singleProfile = await Transaction.findById(req.params.id);
 
     if (singleProfile) {
-        res.status(201).json({
+        res.status(200).json({
             data: singleProfile,
-            status: 201,
+            status: 200,
             message: "Transaction loaded successfully!"
         });
     } else {
@@ -175,7 +175,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
     });
 
     if (updateOne) {
-        res.status(201).json({
+        res.status(200).json({
             data: {
                 _id: _id,
                 person_id: person_id,
@@ -187,7 +187,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
                 type_of_transaction: type_of_transaction,
                 amount: amount,
             },
-            status: 201,
+            status: 200,
             message: "Transaction updated successfully!"
         });
     } else {
@@ -205,8 +205,8 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     const removeTransaction = await Profile.findByIdAndDelete(req.params.id);
 
     if (removeTransaction) {
-        res.status(201).json({
-            status: 201,
+        res.status(200).json({
+            status: 200,
             message: "Transaction deleted successfully!"
         });
     } else {

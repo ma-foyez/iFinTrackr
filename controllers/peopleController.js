@@ -39,7 +39,7 @@ const createProfile = asyncHandler(async (req, res) => {
     const createdNewProfile = await Profile.findOne({ mobile });
 
     if (createProfile) {
-        res.status(201).json({
+        res.status(200).json({
             data: {
                 _id: createProfile._id,
                 name: createProfile.name,
@@ -53,7 +53,7 @@ const createProfile = asyncHandler(async (req, res) => {
                 due_payable: createdNewProfile.due_payable,
                 pic: createProfile.pic,
             },
-            status: 201,
+            status: 200,
             message: "You have successfully create profile!"
 
         });
@@ -118,7 +118,7 @@ const getProfileList = asyncHandler(async (req, res) => {
         profileList.push(updatedProfile);
     }
 
-    res.status(201).json({
+    res.status(200).json({
         pagination: {
             total_data: count,
             total_page: viewCurrentPage,
@@ -126,7 +126,7 @@ const getProfileList = asyncHandler(async (req, res) => {
             data_load_current_page: items.length,
         },
         data: profileList,
-        status: 201,
+        status: 200,
         message: "Profile list loaded successfully!",
     });
 });
@@ -166,7 +166,7 @@ const getProfileDetails = asyncHandler(async (req, res) => {
         dueLiabilities = totalLiabilities - totalPayable;
     }
 
-    res.status(201).json({
+    res.status(200).json({
         data: {
             profile: {
                 ...singleProfile._doc,
@@ -176,7 +176,7 @@ const getProfileDetails = asyncHandler(async (req, res) => {
                 due_payable: duePayable
             },
         },
-        status: 201,
+        status: 200,
         message: "Profile loaded successfully!",
     });
 });
@@ -210,7 +210,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     });
 
     if (updateOne) {
-        res.status(201).json({
+        res.status(200).json({
             data: {
                 _id: _id,
                 name: name,
@@ -222,7 +222,7 @@ const updateProfile = asyncHandler(async (req, res) => {
                 total_payable: alreadyExits.total_payable,
                 pic: pic
             },
-            status: 201,
+            status: 200,
             message: "Profile updated successfully!"
         });
     } else {
@@ -240,8 +240,8 @@ const deleteProfile = asyncHandler(async (req, res) => {
     const removeProfile = await Profile.findByIdAndDelete(req.params.id);
 
     if (removeProfile) {
-        res.status(201).json({
-            status: 201,
+        res.status(200).json({
+            status: 200,
             message: "Profile deleted successfully!"
         });
     } else {

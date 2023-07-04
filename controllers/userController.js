@@ -26,8 +26,8 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     if (user) {
-        res.status(201).json({
-            status: 201,
+        res.status(200).json({
+            status: 200,
             message: "You have been successfully create new account",
             data: {
                 _id: user._id,
@@ -50,8 +50,8 @@ const authUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({ mobile });
 
     if (user && (await user.matchPassword(password))) {
-        res.status(201).json({
-            status: 201,
+        res.status(200).json({
+            status: 200,
             message: "Login successfully.",
             data: {
                 _id: user._id,
