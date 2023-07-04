@@ -26,6 +26,10 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     if (user) {
+        const token = generateToken(user._id);
+        user.tokens.push({ token }); // Save the token to the user's tokens array
+        await user.save();
+
         res.status(200).json({
             status: 200,
             message: "You have been successfully create new account",
@@ -34,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
                 name: user.name,
                 email: user.mobile,
                 pic: user.pic,
-                token: generateToken(user._id),
+                access_token: token
             }
 
         });
@@ -49,7 +53,12 @@ const authUser = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ mobile });
 
-    if (user && (await user.matchPassword(password))) {
+    if (user && user.matchPassword(password)) {
+
+        const token = generateToken(user._id);
+        user.tokens.push({ token }); // Save the token to the user's tokens array
+        await user.save();
+
         res.status(200).json({
             status: 200,
             message: "Login successfully.",
@@ -58,7 +67,7 @@ const authUser = asyncHandler(async (req, res) => {
                 name: user.name,
                 mobile: user.mobile,
                 pic: user.pic,
-                access_token: generateToken(user._id),
+                access_token: token,
             }
         });
     } else {
@@ -67,4 +76,20 @@ const authUser = asyncHandler(async (req, res) => {
     }
 })
 
-module.exports = { registerUser, authUser }
+
+const logout = asyncHandler(async (req, res) => {
+    const user = req.user; // Assuming the authenticated user is available in req.user
+    const token = req.headers.authorization.split(" ")[1]; // Assuming the token is provided in the "Authorization" header as a bearer token
+    // Remove the token from the user's tokens array
+    const getUser = await User.findOne({ _id: user.id });
+
+    getUser.tokens = getUser.tokens.filter((tokenObj) => tokenObj.token !== token);
+
+    await getUser.save();
+    res.status(200).json({
+      status: 200,
+      message: "Logout successful.",
+    });
+  });
+
+module.exports = { registerUser, authUser, logout }

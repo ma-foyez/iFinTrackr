@@ -10,6 +10,7 @@ const userSchema = mongoose.Schema(
             type: String,
             default: "https://www.pngitem.com/pimgs/m/130-1300253_female-user-icon-png-download-user-image-color.png",
         },
+        tokens: [{ token: { type: String, required: true } }],
     },
     {
         collection: "auth_collection",
