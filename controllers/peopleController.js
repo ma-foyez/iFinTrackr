@@ -67,6 +67,7 @@ const createProfile = asyncHandler(async (req, res) => {
 /**
  * Get Profile Information List
  */
+
 const getProfileList = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

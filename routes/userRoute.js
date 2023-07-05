@@ -1,6 +1,6 @@
 const express = require("express");
 const { registerUser, authUser, logout } = require("../controllers/userController");
-const { authenticateToken } = require("../middleware/errorMiddleware");
+const { authenticateToken } = require("../config/generateToken");
 const AuthRouter = express.Router();
 
 AuthRouter.route('/').post(registerUser)

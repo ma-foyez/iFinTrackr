@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const res = require("express/lib/response");
 const User = require("../models/userModel");
-const generateToken = require("../config/generateToken");
+const { generateToken } = require("../config/generateToken");
 
 const registerUser = asyncHandler(async (req, res) => {
     const { name, mobile, password, pic } = req.body;
@@ -82,14 +82,13 @@ const logout = asyncHandler(async (req, res) => {
     const token = req.headers.authorization.split(" ")[1]; // Assuming the token is provided in the "Authorization" header as a bearer token
     // Remove the token from the user's tokens array
     const getUser = await User.findOne({ _id: user.id });
-
     getUser.tokens = getUser.tokens.filter((tokenObj) => tokenObj.token !== token);
 
     await getUser.save();
     res.status(200).json({
-      status: 200,
-      message: "Logout successful.",
+        status: 200,
+        message: "Logout successful.",
     });
-  });
+});
 
 module.exports = { registerUser, authUser, logout }

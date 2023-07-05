@@ -2,12 +2,13 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const colors = require("colors");
-const { notFound, errorHandler, authenticateToken } = require("./middleware/errorMiddleware");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 var cors = require('cors');
 const AuthRouter = require("./routes/userRoute");
 const ProfileRoute = require("./routes/PeopleRoute");
 const DailyTransactionRoute = require("./routes/dailyTransactionRoute");
 const MonthlyTransactionRoute = require("./routes/monthlyTransactionRoute");
+const { authenticateToken } = require("./config/generateToken");
 
 dotenv.config();
 
@@ -29,6 +30,5 @@ app.use('/api/v1/monthly-transaction', MonthlyTransactionRoute)
 
 app.use(notFound);
 app.use(errorHandler);
-app.use(authenticateToken);
 
 app.listen(PORT, console.log(`Server start on PORT ${PORT}`.yellow.bold));
