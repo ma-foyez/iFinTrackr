@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const Profile = require("../models/peopleModal");
+const Profile = require("../models/clientModal");
 const Transaction = require("../models/dailyTransactionModal");
 const { transactionCalculationForPeople } = require("../_utlits/transactionCalculation");
 
@@ -12,7 +12,7 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
 
     if (!person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
-        throw new Error("Please input all required fields");
+        throw new Error("Please provide all required fields");
     }
 
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
@@ -141,7 +141,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
 
     if (!_id || !person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
-        throw new Error("Please input all required fields");
+        throw new Error("Please provide all required fields");
     }
 
     const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);

@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
-const ProfileSchema = mongoose.Schema(
+const ClientSchema = mongoose.Schema(
     {
+        auth_user: { type: String, required: true },
         name: { type: String, required: true },
-        mobile: { type: Number, required: true, unique: true },
-        email: { type: String, required: false, unique: true },
+        mobile: { type: Number, required: true, unique: false},
+        email: { type: String, required: false, unique: false},
         relation: { type: String, required: true },
         address: { type: String, required: true },
         total_liabilities: { type: Number, required: false, default: 0 },
@@ -23,6 +24,6 @@ const ProfileSchema = mongoose.Schema(
     }
 );
 
-const Profile = mongoose.model("Profile", ProfileSchema);
+const Client = mongoose.model("Client", ClientSchema);
 
-module.exports = Profile;
+module.exports = Client;

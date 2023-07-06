@@ -8,7 +8,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (!name || !mobile || !password) {
         res.status(400);
-        throw new Error("Please enter all fields");
+        throw new Error("Please provide all required fields");
     }
 
     const userExits = await User.findOne({ mobile });

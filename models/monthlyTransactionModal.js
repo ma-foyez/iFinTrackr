@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const MonthlyTransactionSchema = mongoose.Schema(
     {
-        user_id: { type: String, required: true },
+        auth_user: { type: String, required: true },
         date_of_transaction: { type: String, required: true },
         type_of_transaction: { type: String, required: true },
         source: { type: String, required: true },

@@ -21,7 +21,7 @@ const authenticateToken = async (req, res, next) => {
             const getUser = await User.findOne({ _id: decoded.id });
             if (!getUser) {
                 res.status(401);
-                return res.json({ message: "Invalid User!" });
+                return res.json({ message: "Invalid Access Token!" });
             }
             const matchToken = getUser.tokens.find((tokenObj) => tokenObj.token === headersToken);
 

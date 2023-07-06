@@ -1,33 +1,39 @@
 const asyncHandler = require("express-async-handler");
-const Profile = require("../models/peopleModal");
+const Client = require("../models/clientModal");
 const Transaction = require("../models/dailyTransactionModal");
 
 /**
- * Store New Profile Information
+ * Store New Client Information
  */
 
-const createProfile = asyncHandler(async (req, res) => {
+const createClient = asyncHandler(async (req, res) => {
     const { name, mobile, email, relation, address, pic } = req.body;
+    const auth_user = req.user.id;
 
     if (!name || !mobile || !relation || !address) {
         res.status(400);
-        throw new Error("Please input all required fields");
+        throw new Error("Please provide all required fields");
     }
 
-    const profileCheckByMobile = await Profile.findOne({ mobile });
-    const profileCheckByEmail = await Profile.findOne({ email });
+    const mobileExists = await Client.exists({ mobile: mobile, auth_user: auth_user });
+    const emailExists = await Client.exists({ email: email, auth_user: auth_user });
 
-    if (profileCheckByMobile) {
+    if (mobileExists) {
         res.status(400);
-        throw new Error("This mobile number is used for another account!");
+        throw new Error("This mobile number is used for another person!");
     }
-    if (profileCheckByEmail) {
+    if (emailExists) {
         res.status(400);
-        throw new Error("This email address is used for another account!");
+        throw new Error("This email is used for another person!");
     }
+    // if (ClientCheckByEmail) {
+    //     res.status(400);
+    //     throw new Error("This email address is used for person!");
+    // }
 
 
-    const createProfile = await Profile.create({
+    const createClient = await Client.create({
+        auth_user,
         name,
         mobile,
         email,
@@ -36,59 +42,59 @@ const createProfile = asyncHandler(async (req, res) => {
         pic,
     });
 
-    const createdNewProfile = await Profile.findOne({ mobile });
+    const createdNewClient = await Client.findOne({ mobile });
 
-    if (createProfile) {
+    if (createClient) {
         res.status(200).json({
-            data: {
-                _id: createProfile._id,
-                name: createProfile.name,
-                mobile: createProfile.mobile,
-                email: createProfile.email,
-                relation: createProfile.relation,
-                address: createProfile.address,
-                total_liabilities: createdNewProfile.total_liabilities,
-                total_payable: createdNewProfile.total_payable,
-                due_liabilities: createdNewProfile.due_liabilities,
-                due_payable: createdNewProfile.due_payable,
-                pic: createProfile.pic,
-            },
             status: 200,
-            message: "You have successfully create profile!"
-
+            message: "You have successfully create Client!",
+            data: {
+                _id: createClient._id,
+                name: createClient.name,
+                mobile: createClient.mobile,
+                email: createClient.email,
+                relation: createClient.relation,
+                address: createClient.address,
+                total_liabilities: createdNewClient.total_liabilities,
+                total_payable: createdNewClient.total_payable,
+                due_liabilities: createdNewClient.due_liabilities,
+                due_payable: createdNewClient.due_payable,
+                pic: createClient.pic,
+            },
         });
     } else {
         res.status(400);
-        throw new Error("Failed to create new profile!");
+        throw new Error("Failed to create new Client!");
     }
 });
 
 
 /**
- * Get Profile Information List
+ * Get Client Information List
  */
 
-const getProfileList = asyncHandler(async (req, res) => {
+const getClientList = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const auth_user = req.user.id;
 
-    const countPromise = Profile.countDocuments({});
-    const itemsPromise = Profile.find().limit(limit).skip(page > 1 ? skip : 0);
+    const countPromise = Client.countDocuments({auth_user: auth_user});
+    const itemsPromise = Client.find({auth_user: auth_user}).limit(limit).skip(page > 1 ? skip : 0);
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = count / limit;
     const viewCurrentPage = count > limit ? Math.ceil(pageCount) : page;
 
     if (!items) {
         res.status(400);
-        throw new Error("Failed to load profile list.");
+        throw new Error("Failed to load Client list.");
     }
 
-    const profileList = [];
+    const clientList = [];
 
     for (let i = 0; i < items.length; i++) {
-        const profile = items[i];
-        const transactions = await Transaction.find({ person_id: profile._id });
+        const Client = items[i];
+        const transactions = await Transaction.find({ person_id: Client._id });
 
         let totalPayable = 0;
         let totalLiabilities = 0;
@@ -109,14 +115,14 @@ const getProfileList = asyncHandler(async (req, res) => {
             dueLiabilities = totalLiabilities - totalPayable;
         }
 
-        const updatedProfile = {
-            ...profile._doc,
+        const updatedClient = {
+            ...Client._doc,
             total_payable: totalPayable,
             total_liabilities: totalLiabilities,
             due_liabilities: dueLiabilities,
             due_payable: duePayable
         };
-        profileList.push(updatedProfile);
+        clientList.push(updatedClient);
     }
 
     res.status(200).json({
@@ -126,27 +132,27 @@ const getProfileList = asyncHandler(async (req, res) => {
             current_page: page,
             data_load_current_page: items.length,
         },
-        data: profileList,
+        data: clientList,
         status: 200,
-        message: "Profile list loaded successfully!",
+        message: "Client list loaded successfully!",
     });
 });
 
 
 
 /**
- * Get Single Profile
+ * Get Single Client
  */
-const getProfileDetails = asyncHandler(async (req, res) => {
-    const profileId = req.params.id;
+const getClientDetails = asyncHandler(async (req, res) => {
+    const ClientId = req.params.id;
 
-    const singleProfile = await Profile.findById(profileId);
-    if (!singleProfile) {
+    const singleClient = await Client.findById(ClientId);
+    if (!singleClient) {
         res.status(400);
-        throw new Error("Failed to load profile");
+        throw new Error("Failed to load Client");
     }
 
-    const transactions = await Transaction.find({ person_id: profileId });
+    const transactions = await Transaction.find({ person_id: ClientId });
 
     let totalPayable = 0;
     let totalLiabilities = 0;
@@ -169,8 +175,8 @@ const getProfileDetails = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         data: {
-            profile: {
-                ...singleProfile._doc,
+            Client: {
+                ...singleClient._doc,
                 total_liabilities: totalLiabilities,
                 total_payable: totalPayable,
                 due_liabilities: dueLiabilities,
@@ -178,26 +184,26 @@ const getProfileDetails = asyncHandler(async (req, res) => {
             },
         },
         status: 200,
-        message: "Profile loaded successfully!",
+        message: "Client loaded successfully!",
     });
 });
 
 
 /**
- * Update Profile Info
+ * Update Client Info
  */
-const updateProfile = asyncHandler(async (req, res) => {
+const updateClient = asyncHandler(async (req, res) => {
 
     const { _id, name, mobile, email, relation, address, pic } = req.body;
 
     if (!_id || !name || !mobile || !relation || !address) {
         res.status(400);
-        throw new Error("Please input all required fields");
+        throw new Error("Please provide all required fields");
     }
 
-    const alreadyExits = await Profile.findOne({ _id });
+    const alreadyExits = await Client.findOne({ _id });
 
-    const updateOne = await Profile.updateOne({ _id }, {
+    const updateOne = await Client.updateOne({ _id }, {
         $set: {
             _id: _id,
             name: name,
@@ -224,31 +230,31 @@ const updateProfile = asyncHandler(async (req, res) => {
                 pic: pic
             },
             status: 200,
-            message: "Profile updated successfully!"
+            message: "Client updated successfully!"
         });
     } else {
         res.status(400);
-        throw new Error("Failed to profile");
+        throw new Error("Failed to Client");
     }
 });
 
 
 /**
- * Delete Single Profile
+ * Delete Single Client
  */
-const deleteProfile = asyncHandler(async (req, res) => {
+const deleteClient = asyncHandler(async (req, res) => {
 
-    const removeProfile = await Profile.findByIdAndDelete(req.params.id);
+    const removeClient = await Client.findByIdAndDelete(req.params.id);
 
-    if (removeProfile) {
+    if (removeClient) {
         res.status(200).json({
             status: 200,
-            message: "Profile deleted successfully!"
+            message: "Client deleted successfully!"
         });
     } else {
         res.status(400);
-        throw new Error("Failed to delete profile");
+        throw new Error("Failed to delete Client");
     }
 });
 
-module.exports = { createProfile, getProfileList, getProfileDetails, updateProfile, deleteProfile }
+module.exports = { createClient, getClientList, getClientDetails, updateClient, deleteClient }

@@ -1,4 +1,4 @@
-const Profile = require("../models/peopleModal");
+const Profile = require("../models/clientModal");
 
 const transactionCalculationForPeople = async (personaId, amount, transactionType) => {
     // Retrieve user profile from the database

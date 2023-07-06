@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const TransactionSchema = mongoose.Schema(
     {
+        auth_user: { type: String, required: true },
         person_id: { type: String, required: true },
         person_name: { type: String, required: true },
         type_of_transaction: { type: String, required: true },
