@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Profile = require("../models/clientModal");
-const Transaction = require("../models/dailyTransactionModal");
+const Transaction = require("../models/monthlyTransactionModal");
 const { transactionCalculationForPeople } = require("../_utlits/transactionCalculation");
 
 /**
@@ -8,62 +8,34 @@ const { transactionCalculationForPeople } = require("../_utlits/transactionCalcu
  */
 
 const storeNewTransaction = asyncHandler(async (req, res) => {
-    const { person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const { date_of_transaction, type_of_transaction, source, amount, remarks } = req.body;
+    const auth_user = req.user.id;
 
-    if (!person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
+    if (!date_of_transaction || !type_of_transaction || !source || !amount) {
         res.status(400);
         throw new Error("Please provide all required fields");
     }
 
-    // Get Profiles Details From Profile Collection(PeopleRoute) by _id
-    const getUserById = await Profile.findOne({ _id: person_id });
-
-    if (!getUserById) {
-        res.status(400);
-        throw new Error("Invalid User!");
-    }
-
-    // // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
-    // const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
-    // const updateOne = await Profile.updateOne({ _id: person_id }, {
-    //     $set: {
-    //         total_liabilities: getTotalTransaction.TotalLiabilities,
-    //         total_payable: getTotalTransaction.totalPayable,
-    //         due_liabilities: getTotalTransaction.dueLiabilities,
-    //         due_payable: getTotalTransaction.duePayable,
-
-    //     }
-    // });
-
-    // if (!updateOne) {
-    //     res.status(400);
-    //     throw new Error("Something went wrong! Transaction update failed!");
-    // }
 
     // store New Transaction 
     const storeTransaction = await Transaction.create({
-        person_id,
-        person_name,
-        mobile: getUserById.mobile,
-        email: getUserById.email,
-        relation: getUserById.relation,
+        auth_user,
         date_of_transaction,
         type_of_transaction,
+        source,
         amount,
+        remarks
     });
 
     if (storeTransaction) {
         res.status(200).json({
             data: {
                 _id: storeTransaction._id,
-                person_id: storeTransaction.person_id,
-                person_name: storeTransaction.person_name,
-                mobile: storeTransaction.mobile,
-                email: storeTransaction.email,
-                relation: storeTransaction.relation,
                 date_of_transaction: storeTransaction.date_of_transaction,
                 type_of_transaction: storeTransaction.type_of_transaction,
+                source: storeTransaction.source,
                 amount: storeTransaction.amount,
+                remarks: storeTransaction.remarks,
             },
             status: 200,
             message: "You have successfully record new transaction!"
@@ -79,19 +51,56 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
 /**
  * Get All Transaction List
  */
-
 const getAllTransaction = asyncHandler(async (req, res) => {
+    const authUserId = req.user.id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const userID = req.query.user_id;
-    // Put all your query params in here
-    const countPromise = Transaction.countDocuments({ person_id: userID });
-    const itemsPromise = Transaction.find({ person_id: userID }).limit(limit).skip(page > 1 ? skip : 0);
+    const countPromise = Transaction.countDocuments({ auth_user: authUserId });
+    const itemsPromise = Transaction.find({ auth_user: authUserId })
+        .limit(limit)
+        .skip(page > 1 ? skip : 0);
+
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = Math.ceil(count / limit);
-    const viewCurrentPage = (count > limit) ? Math.min(page, pageCount) : page;
+    const viewCurrentPage = Math.min(page, pageCount);
+
+    let totalIncome = 0;
+    let totalCost = 0;
+    let currentMonthIncome = 0;
+    let currentMonthCost = 0;
+
+    const currentDate = new Date();
+
+    items.forEach((transaction) => {
+        const { type_of_transaction, amount, date_of_transaction } = transaction;
+
+        if (type_of_transaction === "income") {
+            totalIncome += amount;
+        } else {
+            totalCost += amount;
+        }
+
+        const transactionDate = new Date(date_of_transaction);
+        const isCurrentMonth = (
+            transactionDate.getMonth() === currentDate.getMonth() &&
+            transactionDate.getFullYear() === currentDate.getFullYear()
+        );
+
+        if (type_of_transaction === "income" && isCurrentMonth) {
+            currentMonthIncome += amount;
+        } else if (type_of_transaction === "cost" && isCurrentMonth) {
+            currentMonthCost += amount;
+        }
+    });
+
+    const transactionSummary = {
+        total_income: totalIncome,
+        total_cost: totalCost,
+        current_month_income: currentMonthIncome,
+        current_month_cost: currentMonthCost,
+    };
 
     if (items) {
         res.status(200).json({
@@ -101,16 +110,18 @@ const getAllTransaction = asyncHandler(async (req, res) => {
                 current_page: viewCurrentPage,
                 data_load_current_page: items.length,
             },
+            transaction_summary: transactionSummary,
             data: items,
             status: 200,
             message: "Transaction list loaded successfully!",
         });
     } else {
-        res.status(400);
-        throw new Error("Failed to load transaction list.");
+        res.status(400).json({
+            status: 400,
+            message: "Failed to load transaction list.",
+        });
     }
 });
-
 
 
 /**
@@ -137,30 +148,23 @@ const getSingleTransaction = asyncHandler(async (req, res) => {
  */
 const updateTransaction = asyncHandler(async (req, res) => {
 
-    const { _id, person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const { _id, date_of_transaction, type_of_transaction, source, amount, remarks } = req.body;
+    const auth_user = req.user.id;
 
-    if (!_id || !person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
+    if (!date_of_transaction || !type_of_transaction || !source || !amount) {
         res.status(400);
         throw new Error("Please provide all required fields");
     }
 
-    const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
-
-    // Get Profiles Details From Profile Collection(PeopleRoute) by _id
-    const getUserById = await Profile.findOne({ _id: person_id });
-
-    if (!getUserById) {
-        res.status(400);
-        throw new Error("Invalid User!");
-    }
-
-    // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
-    const updateTransaction = await Profile.updateOne({ _id: person_id }, {
+    const updateTransaction = await Transaction.updateOne({ _id, auth_user: auth_user }, {
         $set: {
-            total_liabilities: getTotalTransaction.TotalLiabilities,
-            total_payable: getTotalTransaction.totalPayable,
-            due_liabilities: getTotalTransaction.dueLiabilities,
-            due_payable: getTotalTransaction.duePayable,
+            _id: _id,
+            auth_user: auth_user,
+            date_of_transaction: date_of_transaction,
+            type_of_transaction: type_of_transaction,
+            source: source,
+            amount: amount,
+            remarks: remarks,
         }
     });
 
@@ -169,32 +173,17 @@ const updateTransaction = asyncHandler(async (req, res) => {
         throw new Error("Something went wrong! Transaction update failed!");
     }
 
-    const updateOne = await Transaction.updateOne({ _id }, {
-        $set: {
-            _id: _id,
-            person_id: person_id,
-            person_name: person_name,
-            mobile: mobile,
-            email: email,
-            relation: relation,
-            date_of_transaction: date_of_transaction,
-            type_of_transaction: type_of_transaction,
-            amount: amount,
-        }
-    });
 
-    if (updateOne) {
+    if (updateTransaction) {
         res.status(200).json({
             data: {
                 _id: _id,
-                person_id: person_id,
-                person_name: person_name,
-                mobile: mobile,
-                email: email,
-                relation: relation,
+                auth_user: auth_user,
                 date_of_transaction: date_of_transaction,
                 type_of_transaction: type_of_transaction,
+                source: source,
                 amount: amount,
+                remarks: remarks,
             },
             status: 200,
             message: "Transaction updated successfully!"
@@ -211,7 +200,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
  */
 const deleteTransaction = asyncHandler(async (req, res) => {
 
-    const removeTransaction = await Profile.findByIdAndDelete(req.params.id);
+    const removeTransaction = await Transaction.findByIdAndDelete(req.params.id);
 
     if (removeTransaction) {
         res.status(200).json({
