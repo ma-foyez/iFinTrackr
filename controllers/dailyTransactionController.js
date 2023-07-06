@@ -8,28 +8,30 @@ const { transactionCalculationForPeople } = require("../_utlits/transactionCalcu
  */
 
 const storeNewTransaction = asyncHandler(async (req, res) => {
-    const { person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const { client_id, client_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const auth_user = req.user.id;
 
-    if (!person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
+    if (!client_id || !client_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
         throw new Error("Please provide all required fields");
     }
 
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
-    const getUserById = await Profile.findOne({ _id: person_id });
+    const getClientByID = await Profile.findOne({ _id: client_id, auth_user: auth_user });
 
-    if (!getUserById) {
+    if (!getClientByID) {
         res.status(400);
         throw new Error("User doesn't match!");
     }
 
     // store New Transaction 
     const storeTransaction = await Transaction.create({
-        person_id,
-        person_name,
-        mobile: getUserById.mobile,
-        email: getUserById.email,
-        relation: getUserById.relation,
+        client_id,
+        auth_user,
+        client_name,
+        mobile: getClientByID.mobile,
+        email: getClientByID.email,
+        relation: getClientByID.relation,
         date_of_transaction,
         type_of_transaction,
         amount,
@@ -39,8 +41,8 @@ const storeNewTransaction = asyncHandler(async (req, res) => {
         res.status(200).json({
             data: {
                 _id: storeTransaction._id,
-                person_id: storeTransaction.person_id,
-                person_name: storeTransaction.person_name,
+                client_id: storeTransaction.client_id,
+                client_name: storeTransaction.client_name,
                 mobile: storeTransaction.mobile,
                 email: storeTransaction.email,
                 relation: storeTransaction.relation,
@@ -68,19 +70,19 @@ const getAllTransaction = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-
-    const person_id = req.query.person_id;
+    const auth_user = req.user.id;
+    const client_id = req.query.client_id;
     // Put all your query params in here
     let countPromise;
     let itemsPromise;
-    if (!person_id) {
-        countPromise = Transaction.countDocuments({});
-        itemsPromise = Transaction.find().limit(limit).skip(page > 1 ? skip : 0);
+    if (!client_id) {
+        countPromise = Transaction.countDocuments({ auth_user: auth_user });
+        itemsPromise = Transaction.find({ auth_user: auth_user }).limit(limit).skip(page > 1 ? skip : 0);
     } else {
-        countPromise = Transaction.countDocuments({ person_id: person_id });
-        itemsPromise = Transaction.find({ person_id: person_id }).limit(limit).skip(page > 1 ? skip : 0);
+        countPromise = Transaction.countDocuments({ client_id: client_id, auth_user: auth_user });
+        itemsPromise = Transaction.find({ client_id: client_id, auth_user: auth_user }).limit(limit).skip(page > 1 ? skip : 0);
     }
- 
+
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = Math.ceil(count / limit);
     const viewCurrentPage = (count > limit) ? Math.min(page, pageCount) : page;
@@ -128,25 +130,26 @@ const getSingleTransaction = asyncHandler(async (req, res) => {
  */
 const updateTransaction = asyncHandler(async (req, res) => {
 
-    const { _id, person_id, person_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const { _id, client_id, client_name, date_of_transaction, type_of_transaction, amount } = req.body;
+    const auth_user = req.user.id;
 
-    if (!_id || !person_id || !person_name || !date_of_transaction || !type_of_transaction || !amount) {
+    if (!_id || !client_id || !client_name || !date_of_transaction || !type_of_transaction || !amount) {
         res.status(400);
         throw new Error("Please provide all required fields");
     }
 
-    const getTotalTransaction = await transactionCalculationForPeople(person_id, amount, type_of_transaction);
+    const getTotalTransaction = await transactionCalculationForPeople(client_id, amount, type_of_transaction);
 
     // Get Profiles Details From Profile Collection(PeopleRoute) by _id
-    const getUserById = await Profile.findOne({ _id: person_id });
+    const getClientByID = await Profile.findOne({ _id: client_id });
 
-    if (!getUserById) {
+    if (!getClientByID) {
         res.status(400);
         throw new Error("Invalid User!");
     }
 
     // update Previous Profile by id [update : total_liabilities, total_payable, due_liabilities, due_payable]
-    const updateTransaction = await Profile.updateOne({ _id: person_id }, {
+    const updateTransaction = await Profile.updateOne({ _id: client_id, auth_user: auth_user }, {
         $set: {
             total_liabilities: getTotalTransaction.TotalLiabilities,
             total_payable: getTotalTransaction.totalPayable,
@@ -160,11 +163,11 @@ const updateTransaction = asyncHandler(async (req, res) => {
         throw new Error("Something went wrong! Transaction update failed!");
     }
 
-    const updateOne = await Transaction.updateOne({ _id }, {
+    const updateOne = await Transaction.updateOne({ _id, auth_user: auth_user }, {
         $set: {
             _id: _id,
-            person_id: person_id,
-            person_name: person_name,
+            client_id: client_id,
+            client_name: client_name,
             mobile: mobile,
             email: email,
             relation: relation,
@@ -178,8 +181,8 @@ const updateTransaction = asyncHandler(async (req, res) => {
         res.status(200).json({
             data: {
                 _id: _id,
-                person_id: person_id,
-                person_name: person_name,
+                client_id: client_id,
+                client_name: client_name,
                 mobile: mobile,
                 email: email,
                 relation: relation,
@@ -201,8 +204,12 @@ const updateTransaction = asyncHandler(async (req, res) => {
  * Delete Single Transaction
  */
 const deleteTransaction = asyncHandler(async (req, res) => {
-
-    const removeTransaction = await Profile.findByIdAndDelete(req.params.id);
+    const auth_user = req.user.id;
+    // const removeTransaction = await Profile.findByIdAndDelete(req.params.id);
+    const removeTransaction = await Profile.findOneAndDelete({
+        _id: req.params.id,
+        auth_user: auth_user
+    });
 
     if (removeTransaction) {
         res.status(200).json({

@@ -26,11 +26,6 @@ const createClient = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error("This email is used for another person!");
     }
-    // if (ClientCheckByEmail) {
-    //     res.status(400);
-    //     throw new Error("This email address is used for person!");
-    // }
-
 
     const createClient = await Client.create({
         auth_user,
@@ -79,8 +74,8 @@ const getClientList = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
     const auth_user = req.user.id;
 
-    const countPromise = Client.countDocuments({auth_user: auth_user});
-    const itemsPromise = Client.find({auth_user: auth_user}).limit(limit).skip(page > 1 ? skip : 0);
+    const countPromise = Client.countDocuments({ auth_user: auth_user });
+    const itemsPromise = Client.find({ auth_user: auth_user }).limit(limit).skip(page > 1 ? skip : 0);
     const [count, items] = await Promise.all([countPromise, itemsPromise]);
     const pageCount = count / limit;
     const viewCurrentPage = count > limit ? Math.ceil(pageCount) : page;
@@ -94,7 +89,7 @@ const getClientList = asyncHandler(async (req, res) => {
 
     for (let i = 0; i < items.length; i++) {
         const Client = items[i];
-        const transactions = await Transaction.find({ person_id: Client._id });
+        const transactions = await Transaction.find({ client_id: Client._id });
 
         let totalPayable = 0;
         let totalLiabilities = 0;
@@ -152,7 +147,7 @@ const getClientDetails = asyncHandler(async (req, res) => {
         throw new Error("Failed to load Client");
     }
 
-    const transactions = await Transaction.find({ person_id: ClientId });
+    const transactions = await Transaction.find({ client_id: ClientId });
 
     let totalPayable = 0;
     let totalLiabilities = 0;
@@ -243,8 +238,18 @@ const updateClient = asyncHandler(async (req, res) => {
  * Delete Single Client
  */
 const deleteClient = asyncHandler(async (req, res) => {
+    const auth_user = req.user.id;
+    // const removeClient = await Client.findByIdAndDelete(req.params.id);
+    const removeClient = await Profile.findOneAndDelete({
+        _id: req.params.id,
+        auth_user: auth_user
+    });
 
-    const removeClient = await Client.findByIdAndDelete(req.params.id);
+    // const removeTransaction = await Transaction.deleteMany({
+    //     client_id: req.params.id,
+    //     auth_user: auth_user
+    // });
+
 
     if (removeClient) {
         res.status(200).json({
