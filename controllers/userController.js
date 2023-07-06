@@ -36,7 +36,7 @@ const registerUser = asyncHandler(async (req, res) => {
             data: {
                 _id: user._id,
                 name: user.name,
-                email: user.mobile,
+                mobile: user.mobile,
                 pic: user.pic,
                 access_token: token
             }
@@ -66,6 +66,10 @@ const authUser = asyncHandler(async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 mobile: user.mobile,
+                email: user.email,
+                occupation: user.occupation,
+                address: user.address,
+                blood_group: user.blood_group,
                 pic: user.pic,
                 access_token: token,
             }
@@ -77,6 +81,54 @@ const authUser = asyncHandler(async (req, res) => {
 })
 
 
+/**
+ *  Updated User Information
+ */const updateUserInformation = asyncHandler(async (req, res) => {
+    const { name, mobile, email, occupation, address, blood_group, pic } = req.body;
+    const userID = req.user.id;
+    if (!name || !mobile) {
+        res.status(400);
+        throw new Error("Please provide all required fields");
+    }
+
+    const updateInfo = await User.updateOne({ _id: userID, mobile: mobile }, {
+        $set: {
+            _id: userID,
+            name: name,
+            mobile: mobile,
+            email: email,
+            occupation: occupation,
+            address: address,
+            blood_group: blood_group,
+            pic: pic,
+        }
+    });
+
+    if (updateInfo.nModified === 0) {
+        res.status(400);
+        throw new Error("Failed to update user information!");
+    }
+
+    res.status(200).json({
+        data: {
+            _id: userID,
+            name: name,
+            mobile: mobile,
+            email: email,
+            occupation: occupation,
+            address: address,
+            blood_group: blood_group,
+            pic: pic,
+        },
+        status: 200,
+        message: "User info updated successfully!"
+    });
+});
+
+
+/**
+ * Logout User
+ */
 const logout = asyncHandler(async (req, res) => {
     const user = req.user; // Assuming the authenticated user is available in req.user
     const token = req.headers.authorization.split(" ")[1]; // Assuming the token is provided in the "Authorization" header as a bearer token
@@ -91,4 +143,4 @@ const logout = asyncHandler(async (req, res) => {
     });
 });
 
-module.exports = { registerUser, authUser, logout }
+module.exports = { registerUser, authUser, updateUserInformation, logout }
